@@ -1,28 +1,28 @@
-const ToyModel = require('../models/toyModel');
-const asyncHandler = require('express-async-handler');
+const ToyModel = require("../models/toyModel");
+const asyncHandler = require("express-async-handler");
 
 class ToysController {
   create = asyncHandler(async (req, res) => {
     const { title, price } = req.body;
     if (!title || !price) {
       res.status(400);
-      throw new Error('Title and Price is required');
+      throw new Error("Title and Price is required");
     }
 
-    const toy = await ToyModel.create({ ...req.body });
+    const toy = await ToyModel.create({ ...req.body, owner: req.user.id });
 
     if (!toy) {
       res.status(400);
-      throw new Error('Unable to safe in DB');
+      throw new Error("Unable to safe in DB");
     }
     res.status(201).json({ code: 201, data: toy });
   });
 
   findAll = asyncHandler(async (req, res) => {
-    const toys = await ToyModel.find({});
+    const toys = await ToyModel.find({ owner: req.user.id });
     if (!toys) {
       res.status(400);
-      throw new Error('Unable to fetch');
+      throw new Error("Unable to fetch");
     }
 
     res.status(200).json({ code: 200, data: toys, quantity: toys.length });
@@ -30,7 +30,7 @@ class ToysController {
 
   findOne = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const toy = await ToyModel.findById(id).select('-_id');
+    const toy = await ToyModel.findById(id).select("-_id");
 
     if (!toy) {
       res.status(404);
@@ -42,8 +42,13 @@ class ToysController {
 
   update = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const toy = await ToyModel.findByIdAndUpdate(id, { ...req.body }, { new: true, runValidators: true });
-    if (!toy) {
+
+    const toy = await ToyModel.findByIdAndUpdate(
+      id,
+      { ...req.body },
+      { new: true, runValidators: true }
+    );
+    if (!toy || toy.owner !== req.user.id) {
       res.status(404);
       throw new Error(`Toy with ${id} not found`);
     }
